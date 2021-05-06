@@ -37,14 +37,19 @@ preferences* preferences_read() {
     prefs->hsv_display = get_integer_value(file, "View", "hsv_display", 0);
     prefs->hsl_display = get_integer_value(file, "View", "hsl_display", 0);
     prefs->name_display = get_integer_value(file, "View", "name_display", 1);
+    prefs->main_name_display = get_integer_value(file, "View", "main_name_display", 1);
     prefs->title_bar = get_integer_value(file, "View", "title_bar", 1);
     prefs->zoom_level = get_integer_value(file, "View", "zoom_level", 25);
     prefs->draw_crosshair = get_integer_value(file, "View", "draw_crosshair", 1);
     prefs->frames_per_second = get_integer_value(file, "System", "frames_per_second", 20);
 
-    char* color_map_file = get_string_value(file, "Color", "color_map_file", "res/map.txt");
+    char* color_map_file = get_string_value(file, "Color", "color_map_file", "../res/map.txt");
     prefs->color_map_file = strdup(color_map_file);
     free(color_map_file);
+
+    char* main_color_map_file = get_string_value(file, "Color", "main_color_map_file", "../res/main.txt");
+    prefs->main_color_map_file = strdup(main_color_map_file);
+    free(main_color_map_file);
     g_key_file_free(file);
 
     return prefs;
@@ -91,6 +96,11 @@ void preferences_write(preferences* prefs) {
 
     g_key_file_set_integer (file,
                         "View",
+                        "main_name_display",
+                        prefs->main_name_display);
+
+    g_key_file_set_integer (file,
+                        "View",
                         "title_bar",
                         prefs->title_bar);
 
@@ -113,6 +123,11 @@ void preferences_write(preferences* prefs) {
                         "Color",
                         "color_map_file",
                         prefs->color_map_file);
+
+    g_key_file_set_string (file,
+                        "Color",
+                        "main_color_map_file",
+                        prefs->main_color_map_file);
 
     gchar* preferences_filepath = get_preferences_file_path();
     g_key_file_save_to_file(file, preferences_filepath, NULL);

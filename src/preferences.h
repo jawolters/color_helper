@@ -9,11 +9,13 @@ typedef struct {
     int hsv_display;
     int hsl_display;
     int name_display;
+    int main_name_display;
     int title_bar;
     int draw_crosshair;
     int zoom_level;
     int frames_per_second;
     char* color_map_file;
+    char* main_color_map_file;
 
 } preferences;
 

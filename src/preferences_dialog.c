@@ -7,10 +7,12 @@ GtkWidget* hex_check;
 GtkWidget* hsv_check;
 GtkWidget* hsl_check;
 GtkWidget* name_check;
+GtkWidget* main_name_check;
 GtkWidget* title_bar_check;
 GtkWidget* draw_crosshair_check;
 GtkWidget* zoom_level_combo;
 GtkWidget* color_file_display_label;
+GtkWidget* main_color_file_display_label;
 GtkWidget* fps_spin_button;
 
 static const int ZOOM_LEVELS[] = { 10, 25, 50, 100 };
@@ -65,6 +67,39 @@ void on_color_file_browse_button_pressed(GtkButton* button, gpointer user_data) 
     gtk_widget_destroy (dialog);
 }
 
+void on_main_color_file_browse_button_pressed(GtkButton* button, gpointer user_data) {
+    GtkWidget *dialog;
+    GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
+    gint res;
+
+    dialog = gtk_file_chooser_dialog_new ("Open File",
+					  NULL,
+					  action,
+					  "_Cancel",
+					  GTK_RESPONSE_CANCEL,
+					  "_Open",
+					  GTK_RESPONSE_ACCEPT,
+					  NULL);
+
+    res = gtk_dialog_run (GTK_DIALOG (dialog));
+    if (res == GTK_RESPONSE_ACCEPT)
+      {
+	char *filename;
+	GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
+	filename = gtk_file_chooser_get_filename (chooser);
+        gtk_label_set_text((GtkLabel*)main_color_file_display_label, filename);
+        preferences* p = (preferences*)user_data;
+        if(p->main_color_map_file) {
+            free(p->main_color_map_file);
+        }
+        p->main_color_map_file = malloc((strlen(filename)+1) * sizeof(char));
+        strcpy(p->main_color_map_file, filename);
+	g_free (filename);
+      }
+
+    gtk_widget_destroy (dialog);
+}
+
 void show_preferences_dialog(GtkWindow* parent, preferences* prefs, gboolean(* on_preferences_closed_func)(GtkWidget*, GdkEvent*, gpointer)) {
     GtkWidget* dialog = gtk_dialog_new();
     GtkWidget* content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
@@ -110,18 +145,28 @@ void add_color_tab(GtkWidget* notebook, preferences* prefs) {
 
     // create folor file hbox
     GtkWidget* color_file_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    GtkWidget* color_file_label = gtk_label_new("Color file:");
+    GtkWidget* color_file_label = gtk_label_new("Detailed color file:");
     gtk_box_pack_start(GTK_BOX(color_file_hbox), color_file_label, 0, 0, 0);
     color_file_display_label = gtk_label_new("file.txt");
-    gtk_box_pack_start(GTK_BOX(color_file_hbox), color_file_display_label, 0, 0, 0);
+    gtk_box_pack_start(GTK_BOX(color_file_hbox), color_file_display_label, 1, 0, 0);
     GtkWidget* color_file_browse_button = gtk_button_new_with_label("Browse...");
     gtk_box_pack_start(GTK_BOX(color_file_hbox), color_file_browse_button, 0, 0, 0);
     g_signal_connect(G_OBJECT(color_file_browse_button), "pressed", G_CALLBACK(on_color_file_browse_button_pressed), prefs);
+    
+    GtkWidget* main_color_file_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+    GtkWidget* main_color_file_label = gtk_label_new("Main color file:");
+    gtk_box_pack_start(GTK_BOX(main_color_file_hbox), main_color_file_label, 0, 0, 0);
+    main_color_file_display_label = gtk_label_new("file.txt");
+    gtk_box_pack_start(GTK_BOX(main_color_file_hbox), main_color_file_display_label, 1, 0, 0);
+    GtkWidget* main_color_file_browse_button = gtk_button_new_with_label("Browse...");
+    gtk_box_pack_start(GTK_BOX(main_color_file_hbox), main_color_file_browse_button, 0, 0, 0);
+    g_signal_connect(G_OBJECT(main_color_file_browse_button), "pressed", G_CALLBACK(on_main_color_file_browse_button_pressed), prefs);
 
     // create some other hbox...
     
     // add hbox(s) to vbox
     gtk_box_pack_start(GTK_BOX(vbox), color_file_hbox, 0, 0, 0);
+    gtk_box_pack_start(GTK_BOX(vbox), main_color_file_hbox, 0, 0, 0);
 
     GtkWidget* color_tab_label = gtk_label_new("Color");
     gtk_notebook_append_page(GTK_NOTEBOOK(notebook), vbox, color_tab_label);
@@ -133,22 +178,25 @@ void add_view_tab(GtkWidget* notebook, preferences* prefs) {
     GtkWidget* view_tab_label = gtk_label_new("View");
     gtk_notebook_append_page(GTK_NOTEBOOK(notebook), vbox, view_tab_label);
 
-    rgb_check = gtk_check_button_new_with_label("RGB display");
+    rgb_check = gtk_check_button_new_with_label("Show RGB value");
     gtk_box_pack_start(GTK_BOX(vbox), rgb_check, 0, 0, 0);
 
-    hex_check = gtk_check_button_new_with_label("Hex display");
+    hex_check = gtk_check_button_new_with_label("Show HEX value");
     gtk_box_pack_start(GTK_BOX(vbox), hex_check, 0, 0, 0);
 
-    hsv_check = gtk_check_button_new_with_label("HSV display");
+    hsv_check = gtk_check_button_new_with_label("Show HSV value");
     gtk_box_pack_start(GTK_BOX(vbox), hsv_check, 0, 0, 0);
 
-    hsl_check = gtk_check_button_new_with_label("HSL display");
+    hsl_check = gtk_check_button_new_with_label("Show HSL value");
     gtk_box_pack_start(GTK_BOX(vbox), hsl_check, 0, 0, 0);
     
-    name_check = gtk_check_button_new_with_label("Name display");
+    name_check = gtk_check_button_new_with_label("Show detailed color name");
     gtk_box_pack_start(GTK_BOX(vbox), name_check, 0, 0, 0);
 
-    title_bar_check = gtk_check_button_new_with_label("Title bar");
+    main_name_check = gtk_check_button_new_with_label("Show main color name");
+    gtk_box_pack_start(GTK_BOX(vbox), main_name_check, 0, 0, 0);
+
+    title_bar_check = gtk_check_button_new_with_label("Enable title bar");
     gtk_box_pack_start(GTK_BOX(vbox), title_bar_check, 0, 0, 0);
 
     draw_crosshair_check = gtk_check_button_new_with_label("Draw crosshair");
@@ -175,6 +223,7 @@ void add_view_tab(GtkWidget* notebook, preferences* prefs) {
     g_signal_connect(G_OBJECT(hsv_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->hsv_display));
     g_signal_connect(G_OBJECT(hsl_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->hsl_display));
     g_signal_connect(G_OBJECT(name_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->name_display));
+    g_signal_connect(G_OBJECT(main_name_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->main_name_display));
     g_signal_connect(G_OBJECT(title_bar_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->title_bar));
     g_signal_connect(G_OBJECT(draw_crosshair_check), "toggled", G_CALLBACK(on_toggle_option_changed), &(prefs->draw_crosshair));
 
@@ -187,6 +236,7 @@ void display_preferences(preferences* prefs) {
     gtk_toggle_button_set_active((GtkToggleButton*)hsv_check, prefs->hsv_display);
     gtk_toggle_button_set_active((GtkToggleButton*)hsl_check, prefs->hsl_display);
     gtk_toggle_button_set_active((GtkToggleButton*)name_check, prefs->name_display);
+    gtk_toggle_button_set_active((GtkToggleButton*)main_name_check, prefs->main_name_display);
     gtk_toggle_button_set_active((GtkToggleButton*)title_bar_check, prefs->title_bar);
     gtk_toggle_button_set_active((GtkToggleButton*)draw_crosshair_check, prefs->draw_crosshair);
 
@@ -197,5 +247,6 @@ void display_preferences(preferences* prefs) {
         }
     }
     gtk_label_set_text((GtkLabel*)color_file_display_label, prefs->color_map_file);
+    gtk_label_set_text((GtkLabel*)main_color_file_display_label, prefs->main_color_map_file);
 }
 

@@ -21,6 +21,7 @@
 #define MAX_CONTEXT_SIZE 100
 
 int color_list_length = 0;
+int main_color_list_length = 0;
 
 int USEC_PER_FRAME;
 
@@ -41,6 +42,7 @@ GMainContext* context;
 
 GtkWidget* main_window;
 GtkWidget* color_name_label;
+GtkWidget* main_color_name_label;
 GtkWidget* rgb_label;
 GtkWidget* hex_label;
 GtkWidget* hsv_label;
@@ -63,6 +65,7 @@ GMutex running_mutex;
 color* front_context_buffer;
 color* back_context_buffer;
 color* color_list;
+color* main_color_list;
 
 struct timeval last_update;
 
@@ -80,7 +83,10 @@ void refresh_preferences() {
                                   gtk_widget_hide(hsl_label);
 
     app_preferences.name_display ? gtk_widget_show(color_name_label) :
-                                  gtk_widget_hide(color_name_label);
+                                   gtk_widget_hide(color_name_label);
+
+    app_preferences.main_name_display ? gtk_widget_show(main_color_name_label) :
+                                        gtk_widget_hide(main_color_name_label);
 
     gtk_window_set_decorated((GtkWindow*)main_window, app_preferences.title_bar);
 
@@ -93,6 +99,7 @@ void refresh_preferences() {
     clear_surface (rgb_surface);
     clear_surface (context_surface);
     load_color_list();
+    load_main_color_list();
 }
 
 static gboolean on_preferences_closed(GtkWidget* widget, GdkEvent* event, gpointer user_data) {
@@ -147,6 +154,18 @@ static gboolean on_window_clicked(GtkWidget* widget, GdkEventButton* event, gpoi
         gtk_window_begin_move_drag(GTK_WINDOW(widget), event->button, event->x_root, event->y_root, event->time);
     }
 
+    return TRUE;
+}
+
+static gboolean on_key_pressed(GtkWidget* widget, GdkEventKey* event, gpointer userdata)
+{
+    if (event->type == GDK_KEY_PRESS && event->keyval == GDK_KEY_Escape){
+        g_mutex_lock(&running_mutex);
+        running = 0;
+        g_mutex_unlock(&running_mutex);
+        gtk_widget_destroy(widget);
+        return FALSE;
+    }
     return TRUE;
 }
 
@@ -373,9 +392,7 @@ void get_context_pixels(Display* d, int x, int y) {
     last_update = get_time();
  }
 
-
-
-static gboolean update_color(gpointer user_data) {
+static gboolean update_color(gpointer user_data) {    
     LOG_TID();
     if(!running)
         return G_SOURCE_REMOVE;
@@ -418,7 +435,7 @@ static gboolean update_color(gpointer user_data) {
 
     // set name readout
     color c = nearest_color(r, g, b, color_list, color_list_length);
-
+    
     char nameLbl[60];
     sprintf(nameLbl, c.name);
     char *name_str = g_strdup_printf ("<span font=\"12\" color=\"black\">"
@@ -426,6 +443,16 @@ static gboolean update_color(gpointer user_data) {
                              "</span>",
                              nameLbl);
     gtk_label_set_markup(GTK_LABEL(color_name_label), name_str);
+
+    color sc = nearest_color(r, g, b, main_color_list, main_color_list_length);
+    
+    char main_nameLbl[60];
+    sprintf(main_nameLbl, sc.name);
+    char *main_name_str = g_strdup_printf ("<span font=\"12\" color=\"black\">"
+                               "%s"
+                             "</span>",
+                             main_nameLbl);
+    gtk_label_set_markup(GTK_LABEL(main_color_name_label), main_name_str);
 
     char* hex_str = g_strdup_printf ("<span font=\"12\" color=\"black\">"
                                "Hex: %02X %02X %02X"
@@ -439,8 +466,9 @@ static gboolean update_color(gpointer user_data) {
     g_free(hsv_str);
     g_free(hsl_str);
     g_free(name_str);
-    g_free(hex_str);
-
+    g_free(main_name_str);
+    g_free(hex_str);    
+    
     return G_SOURCE_REMOVE;
 }
 
@@ -551,16 +579,19 @@ static void activate (GtkApplication *app, gpointer user_data) {
     gtk_box_pack_start(GTK_BOX(hbox), vbox, 0, 0, 0);
 
     color_name_label = gtk_label_new("Cornflower blue");
-    gtk_box_pack_start(GTK_BOX(vbox), color_name_label, 0, 0, 0);
-
     gtk_widget_set_valign(color_name_label, GTK_ALIGN_START);
     gtk_widget_set_halign(color_name_label, GTK_ALIGN_START);
+    gtk_box_pack_start(GTK_BOX(vbox), color_name_label, 0, 0, 0);
+
+    main_color_name_label = gtk_label_new("Blue");
+    gtk_widget_set_valign(main_color_name_label, GTK_ALIGN_START);
+    gtk_widget_set_halign(main_color_name_label, GTK_ALIGN_START);
+    gtk_box_pack_start(GTK_BOX(vbox), main_color_name_label, 0, 0, 0);
 
     rgb_label = gtk_label_new("127, 127, 127");
-    gtk_box_pack_start(GTK_BOX(vbox), rgb_label, 0, 0, 0);
-
     gtk_widget_set_valign(rgb_label, GTK_ALIGN_START);
     gtk_widget_set_halign(rgb_label, GTK_ALIGN_START);
+    gtk_box_pack_start(GTK_BOX(vbox), rgb_label, 0, 0, 0);
 
     hex_label = gtk_label_new("FF FF FF");
     gtk_widget_set_valign(hex_label, GTK_ALIGN_START);
@@ -600,6 +631,9 @@ static void activate (GtkApplication *app, gpointer user_data) {
 
     g_signal_connect (main_window, "button-press-event",
             G_CALLBACK(on_window_clicked), NULL);
+        
+    g_signal_connect (main_window, "key-press-event",
+            G_CALLBACK(on_key_pressed), NULL);
 
     gtk_widget_show_all (main_window);
     refresh_preferences();
@@ -624,17 +658,29 @@ void load_color_list() {
     }
 }
 
+void load_main_color_list() {
+    if(main_color_list) {
+        free(main_color_list);
+    }
+
+    if(!read_colors(&main_color_list, app_preferences.main_color_map_file, &main_color_list_length)) {
+        printf("Failed to open color file %s, color naming is disabled.\n",
+            app_preferences.main_color_map_file);
+    }
+}
+
 int main (int argc, char **argv) {
     load_preferences();
     front_context_buffer = calloc(MAX_CONTEXT_SIZE * MAX_CONTEXT_SIZE, sizeof(color));
     back_context_buffer = calloc(MAX_CONTEXT_SIZE * MAX_CONTEXT_SIZE, sizeof(color));
     last_update = get_time();
-
+    
     XInitThreads();
     g_mutex_init(&running_mutex);
 
     GtkApplication* app = gtk_application_new ("org.gtk.example", G_APPLICATION_FLAGS_NONE);
     g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
+    
     int status = g_application_run (G_APPLICATION (app), argc, argv);
 
     // wait on both threads before deleting buffers
@@ -644,6 +690,7 @@ int main (int argc, char **argv) {
     // free all resources
     g_object_unref (app);
     free(color_list);
+    free(main_color_list);
     free(front_context_buffer);
     free(back_context_buffer);
     free(app_preferences.color_map_file);
