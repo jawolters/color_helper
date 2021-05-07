@@ -43,15 +43,6 @@ preferences* preferences_read() {
     prefs->draw_crosshair = get_integer_value(file, "View", "draw_crosshair", 1);
     prefs->frames_per_second = get_integer_value(file, "System", "frames_per_second", 20);
 
-    char* color_map_file = get_string_value(file, "Color", "color_map_file", "../res/map.txt");
-    prefs->color_map_file = strdup(color_map_file);
-    free(color_map_file);
-
-    char* main_color_map_file = get_string_value(file, "Color", "main_color_map_file", "../res/main.txt");
-    prefs->main_color_map_file = strdup(main_color_map_file);
-    free(main_color_map_file);
-    g_key_file_free(file);
-
     return prefs;
 }
 
@@ -118,16 +109,6 @@ void preferences_write(preferences* prefs) {
                         "System",
                         "frames_per_second",
                         prefs->frames_per_second);
-
-    g_key_file_set_string (file,
-                        "Color",
-                        "color_map_file",
-                        prefs->color_map_file);
-
-    g_key_file_set_string (file,
-                        "Color",
-                        "main_color_map_file",
-                        prefs->main_color_map_file);
 
     gchar* preferences_filepath = get_preferences_file_path();
     g_key_file_save_to_file(file, preferences_filepath, NULL);

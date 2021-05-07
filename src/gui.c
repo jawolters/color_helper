@@ -9,6 +9,7 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 #include <math.h>
+#include <string.h>
 
 #include "preferences_dialog.h"
 #include "preferences.h"
@@ -17,11 +18,14 @@
 #include "util.h"
 #include "gui.h"
 
+#include "basic.txt.hex"
+#include "full.txt.hex"
+
 #define DEBUG 0
 #define MAX_CONTEXT_SIZE 100
 
-int color_list_length = 0;
-int main_color_list_length = 0;
+int basic_color_list_length = 0;
+int full_color_list_length = 0;
 
 int USEC_PER_FRAME;
 
@@ -64,8 +68,8 @@ GMutex running_mutex;
 
 color* front_context_buffer;
 color* back_context_buffer;
-color* color_list;
-color* main_color_list;
+color* basic_color_list;
+color* full_color_list;
 
 struct timeval last_update;
 
@@ -98,8 +102,6 @@ void refresh_preferences() {
 
     clear_surface (rgb_surface);
     clear_surface (context_surface);
-    load_color_list();
-    load_main_color_list();
 }
 
 static gboolean on_preferences_closed(GtkWidget* widget, GdkEvent* event, gpointer user_data) {
@@ -434,7 +436,7 @@ static gboolean update_color(gpointer user_data) {
     gtk_label_set_markup(GTK_LABEL(hsl_label), hsl_str);
 
     // set name readout
-    color c = nearest_color(r, g, b, color_list, color_list_length);
+    color c = nearest_color(r, g, b, full_color_list, full_color_list_length);
     
     char nameLbl[60];
     sprintf(nameLbl, c.name);
@@ -444,7 +446,7 @@ static gboolean update_color(gpointer user_data) {
                              nameLbl);
     gtk_label_set_markup(GTK_LABEL(color_name_label), name_str);
 
-    color sc = nearest_color(r, g, b, main_color_list, main_color_list_length);
+    color sc = nearest_color(r, g, b, basic_color_list, basic_color_list_length);
     
     char main_nameLbl[60];
     sprintf(main_nameLbl, sc.name);
@@ -647,29 +649,29 @@ void load_preferences() {
     free(prefs);
 }
 
-void load_color_list() {
-    if(color_list) {
-        free(color_list);
+void load_full_color_list() {
+    if(full_color_list) {
+        free(full_color_list);
     }
 
-    if(!read_colors(&color_list, app_preferences.color_map_file, &color_list_length)) {
-        printf("Failed to open color file %s, color naming is disabled.\n",
-            app_preferences.color_map_file);
+    if(!read_colors(&full_color_list, full_txt, full_txt_len, &full_color_list_length)) {
+        printf("Failed to load full colors. Color naming is disabled.\n");
     }
 }
 
-void load_main_color_list() {
-    if(main_color_list) {
-        free(main_color_list);
+void load_basic_color_list() {
+    if(basic_color_list) {
+        free(basic_color_list);
     }
 
-    if(!read_colors(&main_color_list, app_preferences.main_color_map_file, &main_color_list_length)) {
-        printf("Failed to open color file %s, color naming is disabled.\n",
-            app_preferences.main_color_map_file);
+    if(!read_colors(&basic_color_list, basic_txt, basic_txt_len, &basic_color_list_length)) {
+        printf("Failed to load basic colors. Color naming is disabled.\n");
     }
 }
 
 int main (int argc, char **argv) {
+    load_basic_color_list();
+    load_full_color_list();
     load_preferences();
     front_context_buffer = calloc(MAX_CONTEXT_SIZE * MAX_CONTEXT_SIZE, sizeof(color));
     back_context_buffer = calloc(MAX_CONTEXT_SIZE * MAX_CONTEXT_SIZE, sizeof(color));
@@ -689,8 +691,8 @@ int main (int argc, char **argv) {
 
     // free all resources
     g_object_unref (app);
-    free(color_list);
-    free(main_color_list);
+    free(full_color_list);
+    free(basic_color_list);
     free(front_context_buffer);
     free(back_context_buffer);
     free(app_preferences.color_map_file);

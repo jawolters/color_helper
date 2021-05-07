@@ -11,8 +11,6 @@ GtkWidget* main_name_check;
 GtkWidget* title_bar_check;
 GtkWidget* draw_crosshair_check;
 GtkWidget* zoom_level_combo;
-GtkWidget* color_file_display_label;
-GtkWidget* main_color_file_display_label;
 GtkWidget* fps_spin_button;
 
 static const int ZOOM_LEVELS[] = { 10, 25, 50, 100 };
@@ -34,79 +32,12 @@ void on_zoom_combo_changed(GtkComboBoxText* widget, gpointer userdata) {
     g_free(selected);
 }
 
-void on_color_file_browse_button_pressed(GtkButton* button, gpointer user_data) {
-    GtkWidget *dialog;
-    GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
-    gint res;
-
-    dialog = gtk_file_chooser_dialog_new ("Open File",
-					  NULL,
-					  action,
-					  "_Cancel",
-					  GTK_RESPONSE_CANCEL,
-					  "_Open",
-					  GTK_RESPONSE_ACCEPT,
-					  NULL);
-
-    res = gtk_dialog_run (GTK_DIALOG (dialog));
-    if (res == GTK_RESPONSE_ACCEPT)
-      {
-	char *filename;
-	GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
-	filename = gtk_file_chooser_get_filename (chooser);
-        gtk_label_set_text((GtkLabel*)color_file_display_label, filename);
-        preferences* p = (preferences*)user_data;
-        if(p->color_map_file) {
-            free(p->color_map_file);
-        }
-        p->color_map_file = malloc((strlen(filename)+1) * sizeof(char));
-        strcpy(p->color_map_file, filename);
-	g_free (filename);
-      }
-
-    gtk_widget_destroy (dialog);
-}
-
-void on_main_color_file_browse_button_pressed(GtkButton* button, gpointer user_data) {
-    GtkWidget *dialog;
-    GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_OPEN;
-    gint res;
-
-    dialog = gtk_file_chooser_dialog_new ("Open File",
-					  NULL,
-					  action,
-					  "_Cancel",
-					  GTK_RESPONSE_CANCEL,
-					  "_Open",
-					  GTK_RESPONSE_ACCEPT,
-					  NULL);
-
-    res = gtk_dialog_run (GTK_DIALOG (dialog));
-    if (res == GTK_RESPONSE_ACCEPT)
-      {
-	char *filename;
-	GtkFileChooser *chooser = GTK_FILE_CHOOSER (dialog);
-	filename = gtk_file_chooser_get_filename (chooser);
-        gtk_label_set_text((GtkLabel*)main_color_file_display_label, filename);
-        preferences* p = (preferences*)user_data;
-        if(p->main_color_map_file) {
-            free(p->main_color_map_file);
-        }
-        p->main_color_map_file = malloc((strlen(filename)+1) * sizeof(char));
-        strcpy(p->main_color_map_file, filename);
-	g_free (filename);
-      }
-
-    gtk_widget_destroy (dialog);
-}
-
 void show_preferences_dialog(GtkWindow* parent, preferences* prefs, gboolean(* on_preferences_closed_func)(GtkWidget*, GdkEvent*, gpointer)) {
     GtkWidget* dialog = gtk_dialog_new();
     GtkWidget* content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
 
     GtkWidget* notebook = gtk_notebook_new();
     add_view_tab(notebook, prefs);
-    add_color_tab(notebook, prefs);
     add_system_tab(notebook, prefs);
     gtk_container_add(GTK_CONTAINER(content_area), notebook);
 
@@ -136,40 +67,8 @@ void add_system_tab(GtkWidget* notebook, preferences* prefs) {
 
     gtk_box_pack_start(GTK_BOX(vbox), fps_control_hbox, 0, 0, 0);
 
-    GtkWidget* color_tab_label = gtk_label_new("System");
-    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), vbox, color_tab_label);
-}
-
-void add_color_tab(GtkWidget* notebook, preferences* prefs) {
-    GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
-
-    // create folor file hbox
-    GtkWidget* color_file_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    GtkWidget* color_file_label = gtk_label_new("Detailed color file:");
-    gtk_box_pack_start(GTK_BOX(color_file_hbox), color_file_label, 0, 0, 0);
-    color_file_display_label = gtk_label_new("file.txt");
-    gtk_box_pack_start(GTK_BOX(color_file_hbox), color_file_display_label, 1, 0, 0);
-    GtkWidget* color_file_browse_button = gtk_button_new_with_label("Browse...");
-    gtk_box_pack_start(GTK_BOX(color_file_hbox), color_file_browse_button, 0, 0, 0);
-    g_signal_connect(G_OBJECT(color_file_browse_button), "pressed", G_CALLBACK(on_color_file_browse_button_pressed), prefs);
-    
-    GtkWidget* main_color_file_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    GtkWidget* main_color_file_label = gtk_label_new("Main color file:");
-    gtk_box_pack_start(GTK_BOX(main_color_file_hbox), main_color_file_label, 0, 0, 0);
-    main_color_file_display_label = gtk_label_new("file.txt");
-    gtk_box_pack_start(GTK_BOX(main_color_file_hbox), main_color_file_display_label, 1, 0, 0);
-    GtkWidget* main_color_file_browse_button = gtk_button_new_with_label("Browse...");
-    gtk_box_pack_start(GTK_BOX(main_color_file_hbox), main_color_file_browse_button, 0, 0, 0);
-    g_signal_connect(G_OBJECT(main_color_file_browse_button), "pressed", G_CALLBACK(on_main_color_file_browse_button_pressed), prefs);
-
-    // create some other hbox...
-    
-    // add hbox(s) to vbox
-    gtk_box_pack_start(GTK_BOX(vbox), color_file_hbox, 0, 0, 0);
-    gtk_box_pack_start(GTK_BOX(vbox), main_color_file_hbox, 0, 0, 0);
-
-    GtkWidget* color_tab_label = gtk_label_new("Color");
-    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), vbox, color_tab_label);
+    GtkWidget* system_tab_label = gtk_label_new("System");
+    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), vbox, system_tab_label);
 }
 
 void add_view_tab(GtkWidget* notebook, preferences* prefs) {
@@ -189,12 +88,6 @@ void add_view_tab(GtkWidget* notebook, preferences* prefs) {
 
     hsl_check = gtk_check_button_new_with_label("Show HSL value");
     gtk_box_pack_start(GTK_BOX(vbox), hsl_check, 0, 0, 0);
-    
-    name_check = gtk_check_button_new_with_label("Show detailed color name");
-    gtk_box_pack_start(GTK_BOX(vbox), name_check, 0, 0, 0);
-
-    main_name_check = gtk_check_button_new_with_label("Show main color name");
-    gtk_box_pack_start(GTK_BOX(vbox), main_name_check, 0, 0, 0);
 
     title_bar_check = gtk_check_button_new_with_label("Enable title bar");
     gtk_box_pack_start(GTK_BOX(vbox), title_bar_check, 0, 0, 0);
@@ -246,7 +139,5 @@ void display_preferences(preferences* prefs) {
             gtk_combo_box_set_active((GtkComboBox*)zoom_level_combo, i);
         }
     }
-    gtk_label_set_text((GtkLabel*)color_file_display_label, prefs->color_map_file);
-    gtk_label_set_text((GtkLabel*)main_color_file_display_label, prefs->main_color_map_file);
 }
 

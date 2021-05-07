@@ -85,23 +85,36 @@ void hsl_from_hsv(float* hsl_h, float* hsl_s, float* hsl_l, float hsv_h, float h
     *hsl_s = ((*hsl_l == 0) || (*hsl_l == 1)) ? 0 : (hsv_v - *hsl_l)/min(*hsl_l, 1-*hsl_l);
 }
 
-int read_colors(color** color_list, char* filepath, int* num_colors) {
+int hex_to_int(char c){
+        int first = c / 16 - 3;
+        int second = c % 16;
+        int result = first*10 + second;
+        if(result > 9) result--;
+        return result;
+}
+
+int hex_to_ascii(char c, char d){
+        int high = hex_to_int(c) * 16;
+        int low = hex_to_int(d);
+        return high+low;
+}
+
+int read_colors(color** color_list, unsigned char* buffer, size_t bufferSize, int* num_colors) {
     color c;
     *color_list = calloc(MAX_COLORS, sizeof(color));
 
-    FILE* file;
-    if((file = fopen(filepath, "r")) == NULL) {
-        sprintf(c.name, "Unknown");
-        c.r = c.g = c.b = 0;
-        *color_list[0] = c;
-        return 0;
-    }
-
-
-    char line[60];
+    size_t ctr = 0;
     int i = 0;
-    while (fgets(line, 60, file) && i < MAX_COLORS) {
+    while (ctr<bufferSize && i < MAX_COLORS) {
         // read color name
+        char line[60] = {0};
+        int j=0;
+        while(buffer[ctr+j] != 0x0a) {
+            line[j] = buffer[ctr+j];
+            j++;
+        }
+        ctr += j+1;
+
         char* pt = strtok(line, ",");
         sprintf(c.name, "%s", pt);
         
@@ -123,7 +136,6 @@ int read_colors(color** color_list, char* filepath, int* num_colors) {
         i++;
     }
     *num_colors = i;
-    fclose(file);
 
     return 1;
 }

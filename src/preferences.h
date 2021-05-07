@@ -15,12 +15,10 @@ typedef struct {
     int zoom_level;
     int frames_per_second;
     char* color_map_file;
-    char* main_color_map_file;
-
 } preferences;
 
 preferences* preferences_read();
-void preferences_write(preferences* preferences);
-void preferences_print(preferences* preferences);
+void preferences_write( preferences* preferences );
+void preferences_print( preferences* preferences );
 
 #endif
